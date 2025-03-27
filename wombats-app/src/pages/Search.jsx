@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Helper for rate-limited API requests
 const requestQueue = [];
@@ -50,6 +51,9 @@ const Search = () => {
   const [pricesLoading, setPricesLoading] = useState(false);
   const [error, setError] = useState('');
   const [requestsInProgress, setRequestsInProgress] = useState(0);
+  const [selectedStock, setSelectedStock] = useState(null);
+  const [chartData, setChartData] = useState([]);
+  const [chartLoading, setChartLoading] = useState(false);
 
   // Finnhub API key
   const FINNHUB_API_KEY = 'cvh3fupr01qi76d6bic0cvh3fupr01qi76d6bicg';
@@ -182,6 +186,92 @@ const Search = () => {
     }
   };
 
+  // Alpha Vantage API key
+  const ALPHA_VANTAGE_API_KEY = 'J8EX2AQ7JU6Y9RXN'; 
+  
+  // Function to fetch historical price data for a stock using Alpha Vantage
+  const fetchStockHistory = async (symbol) => {
+    setChartLoading(true);
+    setChartData([]);
+    
+    try {
+      // Fetch intraday time series data with 5-minute intervals from Alpha Vantage
+      const response = await fetch(
+        `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=5min&apikey=${ALPHA_VANTAGE_API_KEY}&outputsize=full`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch historical data for ${symbol}`);
+      }
+      
+      const data = await response.json();
+      
+      // Alpha Vantage returns data in a different format than Finnhub
+      const timeSeries = data['Time Series (5min)'];
+      
+      if (timeSeries) {
+        // Get the timestamps and sort them in ascending order
+        const timestamps = Object.keys(timeSeries).sort();
+        
+        // Filter to just the last 24 hours of data
+        const oneDayAgo = new Date();
+        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        
+        const recentData = timestamps
+          .filter(timestamp => new Date(timestamp) >= oneDayAgo)
+          .map(timestamp => {
+            const entry = timeSeries[timestamp];
+            return {
+              time: new Date(timestamp),
+              price: parseFloat(entry['4. close']), // Close price
+              open: parseFloat(entry['1. open']),
+              high: parseFloat(entry['2. high']),
+              low: parseFloat(entry['3. low']),
+              volume: parseFloat(entry['5. volume'])
+            };
+          });
+        
+        setChartData(recentData);
+        
+        if (recentData.length === 0) {
+          console.warn('No recent data available for the last 24 hours');
+        }
+      } else {
+        console.warn('No time series data available from Alpha Vantage');
+        setChartData([]);
+      }
+    } catch (err) {
+      console.error(`Error fetching historical data for ${symbol}:`, err);
+      setChartData([]);
+    } finally {
+      setChartLoading(false);
+    }
+  };
+
+  // Function to handle clicking on a stock
+  const handleStockClick = (stock) => {
+    setSelectedStock(stock);
+    fetchStockHistory(stock.symbol);
+  };
+  
+  // Function to close the modal
+  const handleCloseModal = () => {
+    setSelectedStock(null);
+    setChartData([]);
+  };
+  
+  // Format time for chart tooltips
+  const formatChartTime = (time) => {
+    if (!(time instanceof Date)) return '';
+    return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  // Format date for X-axis
+  const formatXAxis = (time) => {
+    if (!(time instanceof Date)) return '';
+    return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   // Format price display
   const formatPrice = (symbol) => {
     const stockData = priceData[symbol];
@@ -246,7 +336,12 @@ const Search = () => {
           
           <ul className="results-list">
             {results.map((item, index) => (
-              <li key={index} className="result-item">
+              <li 
+                key={index} 
+                className="result-item"
+                onClick={() => handleStockClick(item)}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="result-main-info">
                   <div className="result-symbol">{item.symbol}</div>
                   <div className="result-name">{item.description}</div>
@@ -270,6 +365,141 @@ const Search = () => {
       ) : query && !loading && !error ? (
         <div className="no-results">No results found for "{query}"</div>
       ) : null}
+
+      {selectedStock && (
+        <div className="stock-modal-overlay" onClick={handleCloseModal}>
+          <div className="stock-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{selectedStock.symbol}: {selectedStock.description}</h2>
+              <button className="modal-close-btn" onClick={handleCloseModal}>×</button>
+            </div>
+            <div className="modal-content">
+              <div className="modal-chart-section">
+                <h3>Price Chart (Last 24 Hours)</h3>
+                {chartLoading ? (
+                  <div className="loading">Loading chart data...</div>
+                ) : chartData.length > 0 ? (
+                  <div className="chart-container">
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="time" 
+                          tickFormatter={formatXAxis} 
+                          minTickGap={50}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          domain={['auto', 'auto']}
+                          tickFormatter={(value) => value.toFixed(2)}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <Tooltip 
+                          labelFormatter={formatChartTime}
+                          formatter={(value) => [value.toFixed(2), "Price"]}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="price" 
+                          stroke={
+                            chartData.length > 1 && 
+                            chartData[chartData.length - 1].price > chartData[0].price
+                              ? 'var(--color-success)' 
+                              : 'var(--color-error)'
+                          }
+                          dot={false}
+                          activeDot={{ r: 5 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div className="chart-note">
+                      Data provided by Alpha Vantage (5-minute intervals)
+                    </div>
+                  </div>
+                ) : (
+                  <div className="no-chart-data">
+                    <p>No chart data available for this stock or something broke, oops.</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="modal-price-section">
+                <h3>Price Information</h3>
+                {priceData[selectedStock.symbol] ? (
+                  <div className="modal-price-details">
+                    <div className="modal-current-price">
+                      <span className="price-label">Current Price:</span>
+                      <span className="price-value">
+                        {priceData[selectedStock.symbol].price?.toFixed(2) || 'N/A'} 
+                        {priceData[selectedStock.symbol].currency}
+                      </span>
+                    </div>
+                    
+                    {priceData[selectedStock.symbol].change !== undefined && (
+                      <div className="modal-price-change">
+                        <span className="price-label">Change:</span>
+                        <span className={priceData[selectedStock.symbol].change >= 0 ? 'positive-change' : 'negative-change'}>
+                          {priceData[selectedStock.symbol].change >= 0 ? '+' : ''}
+                          {priceData[selectedStock.symbol].change?.toFixed(2)} 
+                          ({priceData[selectedStock.symbol].change >= 0 ? '+' : ''}
+                          {priceData[selectedStock.symbol].changePercent?.toFixed(2)}%)
+                        </span>
+                      </div>
+                    )}
+                    
+                    {priceData[selectedStock.symbol].previousClose !== undefined && (
+                      <div className="modal-previous-close">
+                        <span className="price-label">Previous Close:</span>
+                        <span>{priceData[selectedStock.symbol].previousClose?.toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    {priceData[selectedStock.symbol].high !== undefined && priceData[selectedStock.symbol].low !== undefined && (
+                      <div className="modal-range">
+                        <span className="price-label">Day Range:</span>
+                        <span>
+                          {priceData[selectedStock.symbol].low?.toFixed(2)} - 
+                          {priceData[selectedStock.symbol].high?.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="loading">Loading price data...</div>
+                )}
+              </div>
+              
+              <div className="modal-company-section">
+                <h3>Company Information</h3>
+                <div className="modal-company-details">
+                  {priceData[selectedStock.symbol]?.exchange && (
+                    <div className="modal-exchange">
+                      <span className="detail-label">Exchange:</span>
+                      <span>{priceData[selectedStock.symbol].exchange}</span>
+                    </div>
+                  )}
+                  
+                  {priceData[selectedStock.symbol]?.industry && (
+                    <div className="modal-industry">
+                      <span className="detail-label">Industry:</span>
+                      <span>{priceData[selectedStock.symbol].industry}</span>
+                    </div>
+                  )}
+                  
+                  {priceData[selectedStock.symbol]?.marketCap && (
+                    <div className="modal-market-cap">
+                      <span className="detail-label">Market Cap:</span>
+                      <span>
+                        ${(priceData[selectedStock.symbol].marketCap * 1000000).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
