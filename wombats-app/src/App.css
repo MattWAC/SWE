@@ -396,6 +396,173 @@ a:hover {
   color: var(--color-secondary);
 }
 
+/* Stock modal styles */
+.stock-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+}
+
+.stock-modal {
+  background-color: var(--color-cardBackground);
+  border-radius: 12px;
+  padding: 0;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+  animation: modal-appear 0.3s ease-out;
+}
+
+@keyframes modal-appear {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: white;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.modal-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.modal-content {
+  padding: 24px;
+}
+
+.modal-chart-section,
+.modal-price-section,
+.modal-company-section {
+  margin-bottom: 24px;
+}
+
+.modal-chart-section h3,
+.modal-price-section h3,
+.modal-company-section h3 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.chart-container {
+  margin: 0 -10px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  padding: 15px 5px 5px;
+  border: 1px solid var(--color-border);
+}
+
+.no-chart-data {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  color: var(--color-secondary);
+  font-size: 14px;
+}
+
+.no-chart-data p {
+  margin-bottom: 10px;
+}
+
+.api-limit-note {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--color-warning);
+  opacity: 0.8;
+}
+
+.api-demo-note {
+  font-size: 12px;
+  color: var(--color-info);
+  background-color: rgba(23, 162, 184, 0.1);
+  padding: 5px;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.chart-note {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-secondary);
+  margin-top: 5px;
+  font-style: italic;
+}
+
+.modal-price-details,
+.modal-company-details {
+  display: grid;
+  gap: 12px;
+}
+
+.modal-current-price,
+.modal-price-change,
+.modal-previous-close,
+.modal-range,
+.modal-exchange,
+.modal-industry,
+.modal-market-cap {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.price-label,
+.detail-label {
+  font-weight: 500;
+  color: var(--color-textSecondary);
+}
+
+.price-value {
+  font-weight: 600;
+  font-size: 18px;
+}
+
 /* Settings page styles */
 .settings-section {
   margin-bottom: 30px;
