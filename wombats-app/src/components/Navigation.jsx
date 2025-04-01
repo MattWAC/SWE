@@ -32,7 +32,7 @@ const Navigation = () => {
           
           {!isHomePage && (
             <button onClick={goHome} className="home-button">
-              🏠 Home
+              Home
             </button>
           )}
         </div>

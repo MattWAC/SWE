@@ -54,6 +54,7 @@ const Search = () => {
   const [selectedStock, setSelectedStock] = useState(null);
   const [chartData, setChartData] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
+  const [includeWeird, setIncludeWeird] = useState(false);
 
   // Finnhub API key
   const FINNHUB_API_KEY = 'cvh3fupr01qi76d6bic0cvh3fupr01qi76d6bicg';
@@ -83,10 +84,10 @@ const Search = () => {
         // At some point we should probably figure out how to get rid of those weird stocks lol
         const stockResults = data.result
           .filter(item => item.type === 'Common Stock')
+          .filter(item => includeWeird || !item.symbol.includes('.'))
           .slice(0, 10);
         
         setResults(stockResults);
-        
         // Fetch price data for results
         fetchPriceData(stockResults);
       } else {
@@ -154,9 +155,9 @@ const Search = () => {
       
       // Create price data object
       const priceDataObj = {
-        price: quoteData.c,  // Current price
-        previousClose: quoteData.pc, // Previous close price
-        change: quoteData.c - quoteData.pc, // Calculate change
+        price: quoteData.c, 
+        previousClose: quoteData.pc, 
+        change: quoteData.c - quoteData.pc,
         changePercent: ((quoteData.c - quoteData.pc) / quoteData.pc) * 100,
         high: quoteData.h,
         low: quoteData.l,
@@ -223,7 +224,7 @@ const Search = () => {
             const entry = timeSeries[timestamp];
             return {
               time: new Date(timestamp),
-              price: parseFloat(entry['4. close']), // Close price
+              price: parseFloat(entry['4. close']),
               open: parseFloat(entry['1. open']),
               high: parseFloat(entry['2. high']),
               low: parseFloat(entry['3. low']),
@@ -308,8 +309,27 @@ const Search = () => {
 
   return (
     <div className="page">
-      <h1>Stock Search</h1>
-      
+      <div className="settings-section">
+        <div className="setting-item">
+          <div className="setting-label">
+            <h1>Stock Search</h1>
+          </div>
+          <div className="setting-item-no-border">
+            <span> Include all stocks? </span>
+            <div className="setting-control">
+              <button 
+                      className={`theme-toggle ${includeWeird ? 'dark' : 'light'}`}
+                      onClick={() => setIncludeWeird(!includeWeird)}
+                      aria-label="Include Weird Data">
+                      
+                        <div className="toggle-thumb"></div>
+                        <span className="toggle-text">{includeWeird ? 'on' : 'off'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <form onSubmit={handleSearch} className="search-form">
         <input 
           type="text" 
