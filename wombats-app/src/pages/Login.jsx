@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut} from "firebase/auth";
-import { updateDoc, doc } from "firebase/firestore";
-import { auth } from "../contexts/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut} from "firebase/auth";
+import { updateDoc, doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../contexts/firebase";
 
 
 
 const Login = () => {
   const [email,setemail] = useState("");
   const [password,setPass] = useState("");
+  const [password2,setPass2] = useState("");
   const [errorMSG,setError] = useState("");
-  const [auth,setAuth] = useState(false);
+  const [createAccount,SetCreateAccount] = useState(false);
   const nav = useNavigate();
 
   // const unsubcribe = onAuthStateChanged(auth, (user) => {
@@ -22,21 +23,41 @@ const Login = () => {
 
   const logout = (e) => {
     signOut(auth);
-  }
+    setError("Logged Out");
+  } // probly move this to top bar
 
   const login = (e) => {
     e.preventDefault();
-    console.log(email,password)
+    // console.log(email,password)
     signInWithEmailAndPassword(auth,email,password).then((result) => {
       // Signed in 
-      updateDoc(doc(db,`users/${auth.currentUser.uid}`),{"Money": 10000}); // TODO move this to create account
+      result.uid
       nav("/");
       // ...
     })
     .catch((error) => {
       const errorCode = error.code;
       const errorMessage = error.message;
-      setError(errorMSG);
+      setError(errorMessage);
+      // console.log(errorMessage);
+    });
+  }
+
+  const create = (e) => {
+    e.preventDefault();
+    if(password != password2){
+      setError("Passwords not match.");
+      return;
+    }
+
+    createUserWithEmailAndPassword(auth, email, password).then((UserCred) => {
+      setDoc(doc(db,`users/${auth.currentUser.uid}`),{"Money": 10000});
+      nav("/");
+    }).catch((error) => {
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      setError(errorMessage);
+      // console.log(errorMessage);
     });
   }
 
@@ -47,27 +68,57 @@ const Login = () => {
   return (
     <div className="page">
       <h1>Login</h1>
-      {/* <p>Login form will be implemented here.</p> */}
-      <form onSubmit={login}>
-        <input 
+      {!createAccount ?
+      (<form onSubmit={login}>
+        <p>email:</p><input 
+          type="email"
+          value={email}
+          onChange={(e) => setemail(e.target.value)}
+          required
+        />
+        <br/>
+        <p>Password:</p><input 
+          type="password"
+          value={password}
+          onChange={(e) => setPass(e.target.value)}
+          required
+        />
+        <br/>
+        <a onClick={reset_pass}>Forgot password?</a>
+        <br/>
+        <button type="submit">Login</button>
+        <button onClick={(e) => {SetCreateAccount(true)}}>Create Account</button>
+        {errorMSG ? (<p>{errorMSG}</p>) : ""}
+      </form>
+      ) : ""}
+      {createAccount ?
+      (<form onSubmit={create}>
+        <p>Email:</p><input 
           type="text"
           value={email}
           onChange={(e) => setemail(e.target.value)}
           required
         />
         <br/>
-        <input 
+        <p>Password:</p><input 
           type="password"
           value={password}
           onChange={(e) => setPass(e.target.value)}
           required
         />
-        <a onClick={reset_pass}>Forgot password?</a>
+        <p>Retype Password:</p><input
+          type="password"
+          value={password2}
+          onChange={(e) => setPass2(e.target.value)}
+          required
+        />
         <br/>
-        <button type="submit">Login</button>
+        <button type="submit">Create</button>
         {errorMSG ? (<p>{errorMSG}</p>) : ""}
-        {auth.currentUser ? (<button onClick={logout}>logout</button>): ""}
       </form>
+      ) : ""}
+      {auth.currentUser ? (<button onClick={logout}>logout</button>): ""}
+      
     </div>
   );
 };
