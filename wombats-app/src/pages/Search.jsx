@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { auth, db } from '../contexts/firebase';
+import { addDoc, collection, getDoc, updateDoc, doc } from 'firebase/firestore';
 
 // Helper for rate-limited API requests
 const requestQueue = [];
@@ -55,6 +57,12 @@ const Search = () => {
   const [chartData, setChartData] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
   const [includeWeird, setIncludeWeird] = useState(false);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [transactionLoading, setTransactionLoading] = useState(false);
+  const [transactionError, setTransactionError] = useState('');
+  const [transactionSuccess, setTransactionSuccess] = useState(false);
+  const [userMoney, setUserMoney] = useState(0);
 
   // Finnhub API key
   const FINNHUB_API_KEY = 'cvh3fupr01qi76d6bic0cvh3fupr01qi76d6bicg';
@@ -273,6 +281,110 @@ const Search = () => {
     return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Handle buy button click
+  const handleBuyClick = async (e) => {
+    e.stopPropagation();
+    setQuantity(1);
+    setTransactionError('');
+    setTransactionSuccess(false);
+    
+    // Fetch current user money if logged in
+    if (auth.currentUser) {
+      try {
+        const userDocRef = doc(db, `users/${auth.currentUser.uid}`);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          setUserMoney(userDoc.data().Money || 0);
+        } else {
+          setUserMoney(0);
+        }
+      } catch (error) {
+        console.error('Error fetching user money:', error);
+        setUserMoney(0);
+      }
+    }
+    
+    setShowBuyModal(true);
+  };
+
+  // Handle buy modal close
+  const handleCloseBuyModal = (e) => {
+    if (e) e.stopPropagation();
+    setShowBuyModal(false);
+  };
+
+  // Handle transaction submission
+  const handleTransaction = async (e) => {
+    e.preventDefault();
+    
+    if (!auth.currentUser) {
+      setTransactionError('You must be logged in to make transactions');
+      return;
+    }
+
+    if (quantity <= 0) {
+      setTransactionError('Quantity must be greater than zero');
+      return;
+    }
+
+    setTransactionLoading(true);
+    setTransactionError('');
+    
+    try {
+      // Calculate total cost
+      const quantityNum = parseInt(quantity);
+      const stockPrice = priceData[selectedStock.symbol].price;
+      const totalCost = stockPrice * quantityNum;
+      
+      // Check if user has enough money
+      if (totalCost > userMoney) {
+        setTransactionError(`Insufficient funds. You have $${userMoney.toFixed(2)}, but need $${totalCost.toFixed(2)}`);
+        setTransactionLoading(false);
+        return;
+      }
+      
+      // Create transaction object
+      const transaction = {
+        timestamp: new Date().toISOString(),
+        stock: selectedStock.symbol,
+        quantity: quantityNum,
+        stock_price: stockPrice,
+        total_cost: totalCost
+      };
+      
+      // Get reference to user document
+      const userDocRef = doc(db, `users/${auth.currentUser.uid}`);
+      
+      // Update user's money
+      const remainingMoney = userMoney - totalCost;
+      await updateDoc(userDocRef, {
+        Money: remainingMoney
+      });
+      
+      // Update local state
+      setUserMoney(remainingMoney);
+      
+      // Add transaction to user's transaction history
+      await addDoc(collection(db, `users/${auth.currentUser.uid}/transactions`), transaction);
+      
+      // Show success message
+      setTransactionSuccess(true);
+      setQuantity(1);
+      
+      // Close modal after short delay
+      setTimeout(() => {
+        setShowBuyModal(false);
+        setTransactionSuccess(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Transaction error:', error);
+      setTransactionError(`Error: ${error.message}`);
+    } finally {
+      setTransactionLoading(false);
+    }
+  };
+
   // Format price display
   const formatPrice = (symbol) => {
     const stockData = priceData[symbol];
@@ -391,7 +503,10 @@ const Search = () => {
           <div className="stock-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{selectedStock.symbol}: {selectedStock.description}</h2>
-              <button className="modal-close-btn" onClick={handleCloseModal}>×</button>
+              <div className="modal-header-actions">
+                <button className="buy-button" onClick={handleBuyClick}>Buy</button>
+                <button className="modal-close-btn" onClick={handleCloseModal}>×</button>
+              </div>
             </div>
             <div className="modal-content">
               <div className="modal-chart-section">
@@ -516,6 +631,75 @@ const Search = () => {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Buy Modal */}
+      {selectedStock && showBuyModal && (
+        <div className="stock-modal-overlay" onClick={handleCloseBuyModal}>
+          <div className="buy-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Buy {selectedStock.symbol}</h2>
+              <button className="modal-close-btn" onClick={handleCloseBuyModal}>×</button>
+            </div>
+            <div className="modal-content">
+              {transactionSuccess ? (
+                <div className="transaction-success">
+                  <p>Transaction successful!</p>
+                </div>
+              ) : (
+                <form onSubmit={handleTransaction}>
+                  <div className="buy-details">
+                    <p>Your Balance: ${userMoney.toFixed(2)}</p>
+                    <p>Current Price: {priceData[selectedStock.symbol].price?.toFixed(2) || 'N/A'} {priceData[selectedStock.symbol].currency}</p>
+                    <div className="quantity-input">
+                      <label htmlFor="quantity">Quantity:</label>
+                      <input
+                        id="quantity"
+                        type="number"
+                        min="1"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="total-cost">
+                      <p>Total Cost: {(priceData[selectedStock.symbol].price * quantity).toFixed(2) || 'N/A'} {priceData[selectedStock.symbol].currency}</p>
+                      {userMoney < (priceData[selectedStock.symbol].price * quantity) && (
+                        <p className="insufficient-funds">Insufficient funds</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {transactionError && (
+                    <div className="transaction-error">
+                      <p>{transactionError}</p>
+                    </div>
+                  )}
+                  
+                  {!auth.currentUser && (
+                    <div className="login-message">
+                      <p>You must be logged in to make transactions.</p>
+                    </div>
+                  )}
+                  
+                  <div className="transaction-actions">
+                    <button 
+                      type="submit" 
+                      className="transaction-button" 
+                      disabled={
+                        transactionLoading || 
+                        !auth.currentUser || 
+                        userMoney < (priceData[selectedStock.symbol].price * quantity)
+                      }
+                    >
+                      {transactionLoading ? 'Processing...' : 'Make Transaction'}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>
