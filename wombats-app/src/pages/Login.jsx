@@ -12,6 +12,7 @@ const Login = () => {
   const [password2,setPass2] = useState("");
   const [errorMSG,setError] = useState("");
   const [createAccount,SetCreateAccount] = useState(false);
+  const [reset, SetReset] = useState(false);
   const nav = useNavigate();
 
   // const unsubcribe = onAuthStateChanged(auth, (user) => {
@@ -61,14 +62,15 @@ const Login = () => {
     });
   }
 
-  const reset_pass = () => {
-    // sendPasswordResetEmail(auth,email); //TODO make forgot pass
+  const reset_pass = (e) => {
+    sendPasswordResetEmail(auth,email); //TODO make forgot pass
+    SetReset(false);
   }
 
   return (
     <div className="page">
       <h1>Login</h1>
-      {!createAccount ?
+      {!createAccount && !reset ?
       (<form onSubmit={login}>
         <p>email:</p><input 
           type="email"
@@ -84,7 +86,7 @@ const Login = () => {
           required
         />
         <br/>
-        <a onClick={reset_pass}>Forgot password?</a>
+        <a onClick={(e)=>(SetReset(true))}>Forgot password?</a>
         <br/>
         <button type="submit">Login</button>
         <button onClick={(e) => {SetCreateAccount(true)}}>Create Account</button>
@@ -116,6 +118,18 @@ const Login = () => {
         <button type="submit">Create</button>
         {errorMSG ? (<p>{errorMSG}</p>) : ""}
       </form>
+      ) : ""}
+      {reset ? (
+        <form onSubmit={reset_pass}>
+        <p>Email:</p><input 
+          type="text"
+          value={email}
+          onChange={(e) => setemail(e.target.value)}
+          required
+        />
+        <br/>
+        <button type="submit">Send</button>
+        </form>
       ) : ""}
       {auth.currentUser ? (<button onClick={logout}>logout</button>): ""}
       
