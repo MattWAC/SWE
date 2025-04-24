@@ -142,41 +142,50 @@ const Dashboard = () => {
         if(bestPeformers.length == 0){
           bestPeformers.push(holding);
         }
+        console.log(bestPeformers.length);
         let tempHolding = holding;
         if(bestPeformers[0].profitLoss < tempHolding.profitLoss){
-          const temp = bestPeformers[0];
+          let temp = bestPeformers[0];
           bestPeformers[0] = tempHolding;
           tempHolding = temp;
-          if(bestPeformers.length <= 1){
-            bestPeformers.push(tempHolding);
-          }
         }
+
+        if(bestPeformers.length <= 1){
+          bestPeformers.push(tempHolding);
+        }
+
         if(bestPeformers[1].profitLoss < tempHolding.profitLoss){
-          const temp = bestPeformers[1];
+          let temp = bestPeformers[1];
           bestPeformers[1] = tempHolding;
           tempHolding = temp;
-          if(bestPeformers.length <= 2){
-            bestPeformers.push(tempHolding);
-          }
         }
+
+        if(bestPeformers.length <= 2){
+          bestPeformers.push(tempHolding);
+        }
+
         if(bestPeformers[2].profitLoss < tempHolding.profitLoss){
-          const temp = bestPeformers[2];
+          let temp = bestPeformers[2];
           bestPeformers[2] = tempHolding;
           tempHolding = temp;
-          if(bestPeformers.length <= 3){
-            bestPeformers.push(tempHolding);
-          }
         }
+
+        if(bestPeformers.length <= 3){
+          bestPeformers.push(tempHolding);
+        }
+
         if(bestPeformers[3].profitLoss < tempHolding.profitLoss){
-          const temp = bestPeformers[3];
+          let temp = bestPeformers[3];
           bestPeformers[3] = tempHolding;
           tempHolding = temp;
-          if(bestPeformers.length <= 4){
-            bestPeformers.push(tempHolding);
-          }
         }
+
+        if(bestPeformers.length <= 4){
+          bestPeformers.push(tempHolding);
+        }
+
         if(bestPeformers[4].profitLoss < tempHolding.profitLoss){
-          const temp = bestPeformers[4];
+          let temp = bestPeformers[4];
           bestPeformers[4] = tempHolding;
           tempHolding = temp;
         }
