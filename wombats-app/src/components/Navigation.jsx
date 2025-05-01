@@ -127,12 +127,12 @@ const Navigation = () => {
             <li>
               <Link to="/portfolio" onClick={toggleMenu}>Portfolio</Link>
             </li>
-            <li>
+            {/* <li>
               <Link to="/automated-investing" onClick={toggleMenu}>Automated Investing</Link>
-            </li>
-            <li>
+            </li> */}
+            {/* <li>
               <Link to="/detailed-view" onClick={toggleMenu}>Detailed View</Link>
-            </li>
+            </li> */}
             <li>
               <Link to="/search" onClick={toggleMenu}>Search</Link>
             </li>
@@ -147,9 +147,9 @@ const Navigation = () => {
             <li>
               <Link to="/settings" onClick={toggleMenu}>Settings</Link>
             </li>
-            <li>
+            {/* <li>
               <Link to="/notifications" onClick={toggleMenu}>Notifications</Link>
-            </li>
+            </li> */}
           </ul>
         </div>
       </div>

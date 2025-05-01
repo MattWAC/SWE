@@ -218,9 +218,9 @@ const Dashboard = () => {
         <Link to="/settings" className="dashboard-item">
           <h2>Settings</h2>
         </Link>
-        <Link to="/notifications" className="dashboard-item">
+        {/* <Link to="/notifications" className="dashboard-item">
           <h2>Notifications</h2>
-        </Link>
+        </Link> */}
       </div>
     </div>
   );

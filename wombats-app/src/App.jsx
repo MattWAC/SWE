@@ -33,9 +33,9 @@ function App() {
               <Route path="/performance" element={<Performance />} />
               <Route path="/login" element={<Login />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/automated-investing" element={<AutomatedInvesting />} />
-              <Route path="/detailed-view" element={<DetailedView />} />
+              {/* <Route path="/notifications" element={<Notifications />} /> */}
+              {/* <Route path="/automated-investing" element={<AutomatedInvesting />} /> */}
+              {/* <Route path="/detailed-view" element={<DetailedView />} /> */}
             </Routes>
           </div>
         </div>
