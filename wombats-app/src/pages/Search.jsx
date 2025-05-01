@@ -35,9 +35,24 @@ const processQueue = async () => {
     await new Promise(r => setTimeout(r, 300)); // 300ms delay between requests
     
     const response = await fetch(url);
+    
+    // Check if throttled (status 429)
+    if (response.status === 429) {
+      const data = await response.json();
+      // Create a special throttled response object
+      resolve({
+        response: response,
+        data: data,
+        throttled: true
+      });
+      processQueue(); // Process next request
+      return;
+    }
+    
     const data = await response.json();
     resolve({ response, data });
   } catch (error) {
+    console.error('API request error:', error);
     reject(error);
   }
   
@@ -140,6 +155,25 @@ const Search = () => {
         `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`
       );
       
+      // Check if throttled
+      if (quoteResponse.throttled) {
+        newPriceData[symbol] = { 
+          throttled: true, 
+          retryIn: 10,
+          error: 'API throttled. Please wait 10 seconds before refreshing.' 
+        };
+        
+        setPriceData(prevData => ({
+          ...prevData,
+          [symbol]: { 
+            throttled: true, 
+            retryIn: 10,
+            error: 'API throttled. Please wait 10 seconds before refreshing.' 
+          }
+        }));
+        return;
+      }
+      
       if (!quoteResponse.response.ok) {
         throw new Error(`Failed to fetch price for ${symbol}`);
       }
@@ -153,12 +187,16 @@ const Search = () => {
           `https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${FINNHUB_API_KEY}`
         );
         
-        if (companyResponse.response.ok) {
+        // Handle throttled company data gracefully
+        if (companyResponse.throttled) {
+          companyData = { name: item.description, currency: 'USD' };
+        } else if (companyResponse.response.ok) {
           companyData = companyResponse.data;
         }
       } catch (companyErr) {
         console.warn(`Company data fetch failed for ${symbol}:`, companyErr);
         // Continue with empty company data
+        companyData = { name: item.description, currency: 'USD' };
       }
       
       // Create price data object
@@ -187,10 +225,10 @@ const Search = () => {
       console.error(`Error fetching data for ${symbol}:`, err);
       
       // Set error state
-      newPriceData[symbol] = { error: 'Failed to fetch price data' };
+      newPriceData[symbol] = { error: 'Failed to fetch price data. Try again in a few seconds.' };
       setPriceData(prevData => ({
         ...prevData,
-        [symbol]: { error: 'Failed to fetch price data' }
+        [symbol]: { error: 'Failed to fetch price data. Try again in a few seconds.' }
       }));
     }
   };

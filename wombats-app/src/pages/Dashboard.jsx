@@ -114,6 +114,23 @@ const Dashboard = () => {
               `https://finnhub.io/api/v1/quote?symbol=${holding.symbol}&token=${FINNHUB_API_KEY}`
             );
             
+            // Check if throttled response (status 429)
+            if (response.status === 429) {
+              // Display throttled message but provide fallback data
+              console.log(`API throttled for ${holding.symbol}. Please wait and try again.`);
+              // Return a placeholder with the current holding data
+              return {
+                ...holding,
+                currentPrice: 0,
+                currentValue: 0,
+                averageCost: holding.totalCost / holding.totalQuantity || 0,
+                profitLoss: 0,
+                profitLossPercent: 0,
+                throttled: true,
+                error: 'API throttled. Please wait 10 seconds and refresh.'
+              };
+            }
+            
             if (!response.ok) {
               throw new Error(`Failed to fetch price for ${holding.symbol}`);
             }
@@ -137,10 +154,14 @@ const Dashboard = () => {
             };
           } catch (error) {
             console.error(`Error fetching price for ${holding.symbol}:`, error);
+            // If the price data can't be fetched, use default values
             return {
               ...holding,
-              currentPrice: null,
-              currentValue: null,
+              currentPrice: 0,
+              currentValue: 0,
+              averageCost: holding.totalCost / holding.totalQuantity || 0,
+              profitLoss: 0,
+              profitLossPercent: 0,
               error: 'Failed to fetch current price'
             };
           }
@@ -184,13 +205,23 @@ const Dashboard = () => {
                     <div className="holding-cell">{holding.totalQuantity}</div>
                     <div className="holding-cell">${holding.averageCost.toFixed(2)}</div>
                     <div className="holding-cell">
-                      {holding.currentPrice ? `$${holding.currentPrice.toFixed(2)}` : 'N/A'}
+                      {holding.throttled ? (
+                        <span className="throttled-message">Refresh in 10s</span>
+                      ) : holding.currentPrice ? (
+                        `$${holding.currentPrice.toFixed(2)}`
+                      ) : 'N/A'}
                     </div>
                     <div className="holding-cell">
-                      {holding.currentValue ? `$${holding.currentValue.toFixed(2)}` : 'N/A'}
+                      {holding.throttled ? (
+                        <span className="throttled-message">Refresh in 10s</span>
+                      ) : holding.currentValue ? (
+                        `$${holding.currentValue.toFixed(2)}`
+                      ) : 'N/A'}
                     </div>
-                    <div className={`holding-cell ${holding.profitLoss >= 0 ? 'positive-change' : 'negative-change'}`}>
-                      {holding.profitLoss ? (
+                    <div className={`holding-cell ${holding.throttled ? '' : holding.profitLoss >= 0 ? 'positive-change' : 'negative-change'}`}>
+                      {holding.throttled ? (
+                        <span className="throttled-message">Refresh in 10s</span>
+                      ) : holding.profitLoss ? (
                         <>
                           ${holding.profitLoss.toFixed(2)} ({holding.profitLossPercent.toFixed(2)}%)
                         </>
