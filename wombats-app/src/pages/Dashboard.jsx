@@ -1,28 +1,39 @@
 import { Link } from 'react-router-dom';
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
-import { auth, db } from '../contexts/firebase';
+import { auth, db, onAuthStateChanged } from '../contexts/firebase';
 
 
 const Dashboard = () => {
 
   const [portfolio, setPortfolio] = useState([]);
-  const [LoadingProfolio,setLoadingProfolio] = useState(false);
-
+  const [LoadingProfolio,setLoadingPortfolio] = useState(false);
   const FINNHUB_API_KEY = 'cvh3fupr01qi76d6bic0cvh3fupr01qi76d6bicg';
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
-    if (auth.currentUser) {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (loading) return; // Avoid running before auth is settled
+    if (user) {
       fetchPortfolio();
     } else {
-      setLoadingProfolio(false);
+      setLoadingPortfolio(false);
     }
-  }, [auth.currentUser]);
-
+  }, [loading, user]);
 
   // Fetch portfolio from transactions
   const fetchPortfolio = async () => {
-    setLoadingProfolio(true);
+    setLoadingPortfolio(true);
     
     try {
       // Get user's transactions
@@ -31,7 +42,7 @@ const Dashboard = () => {
       
       if (transactionsSnapshot.empty) {
         setPortfolio([]);
-        setLoadingProfolio(false);
+        setLoadingPortfolio(false);
         return;
       }
       
@@ -135,80 +146,24 @@ const Dashboard = () => {
           }
         })
       );
-      
+
       // getting the top peformers
-      const bestPeformers = [];
-      updatedHoldings.map((holding) => {
-        if(bestPeformers.length == 0){
-          bestPeformers.push(holding);
-        }
-        console.log(bestPeformers.length);
-        let tempHolding = holding;
-        if(bestPeformers[0].profitLoss < tempHolding.profitLoss){
-          let temp = bestPeformers[0];
-          bestPeformers[0] = tempHolding;
-          tempHolding = temp;
-        }
-
-        if(bestPeformers.length <= 1){
-          bestPeformers.push(tempHolding);
-        }
-
-        if(bestPeformers[1].profitLoss < tempHolding.profitLoss){
-          let temp = bestPeformers[1];
-          bestPeformers[1] = tempHolding;
-          tempHolding = temp;
-        }
-
-        if(bestPeformers.length <= 2){
-          bestPeformers.push(tempHolding);
-        }
-
-        if(bestPeformers[2].profitLoss < tempHolding.profitLoss){
-          let temp = bestPeformers[2];
-          bestPeformers[2] = tempHolding;
-          tempHolding = temp;
-        }
-
-        if(bestPeformers.length <= 3){
-          bestPeformers.push(tempHolding);
-        }
-
-        if(bestPeformers[3].profitLoss < tempHolding.profitLoss){
-          let temp = bestPeformers[3];
-          bestPeformers[3] = tempHolding;
-          tempHolding = temp;
-        }
-
-        if(bestPeformers.length <= 4){
-          bestPeformers.push(tempHolding);
-        }
-
-        if(bestPeformers[4].profitLoss < tempHolding.profitLoss){
-          let temp = bestPeformers[4];
-          bestPeformers[4] = tempHolding;
-          tempHolding = temp;
-        }
-      });
+      updatedHoldings.sort((a, b) =>  b.profitLoss-a.profitLoss);
+      let bestPeformers = updatedHoldings.slice(-5);
 
 
       setPortfolio(bestPeformers);
-      console.log(bestPeformers);
-      setLoadingProfolio(false);
+      setLoadingPortfolio(false);
     } catch (error) {
       console.error('Error fetching portfolio:', error);
-      setLoadingProfolio(false);
+      setLoadingPortfolio(false);
     }
   };
 
   return (
     <div className="dashboard-page">
       <h1>Dashboard</h1>
-      <div className="dashboard-grid">
-        <Link to="/portfolio" className="dashboard-item">
-          <h2>Portfolio</h2>
-        </Link>
-        {LoadingProfolio ? (
+      {LoadingProfolio ? (
             <div className="loading">Loading your portfolio...</div>
           ) : portfolio.length > 0 ? (
             <div className="portfolio-holdings">
@@ -246,6 +201,11 @@ const Dashboard = () => {
               </div>
             </div>
           ) : ""}
+      <div className="dashboard-grid">
+        <Link to="/portfolio" className="dashboard-item">
+          <h2>Portfolio</h2>
+        </Link>
+        
         <Link to="/search" className="dashboard-item">
           <h2>Search</h2>
         </Link>
