@@ -240,9 +240,9 @@ const Dashboard = () => {
         <Link to="/search" className="dashboard-item">
           <h2>Search</h2>
         </Link>
-        <Link to="/performance" className="dashboard-item">
+        {/* <Link to="/performance" className="dashboard-item">
           <h2>Performance</h2>
-        </Link>
+        </Link> */}
         <Link to="/login" className="dashboard-item">
           <h2>Login</h2>
         </Link>

@@ -380,7 +380,7 @@ const Portfolio = () => {
           )}
           
           <div className="portfolio-navigation">
-            <Link to="/automated-investing" className="nav-button">
+            {/* <Link to="/automated-investing" className="nav-button">
               Automated Investing
             </Link>
             <Link to="/detailed-view" className="nav-button">
@@ -388,7 +388,7 @@ const Portfolio = () => {
             </Link>
             <Link to="/performance" className="nav-button">
               Performance
-            </Link>
+            </Link> */}
           </div>
         </>
       ) : (
